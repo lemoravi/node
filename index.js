@@ -13,7 +13,10 @@ const express = require('express');
 const app = express();
 require('./db/config');
 const User = require('./db/User');
+const Product = require('./db/Product');
+const Jwt = require('jsonwebtoken');
 const cors = require('cors');
+const jwtKey ='e-comm'; 
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 
