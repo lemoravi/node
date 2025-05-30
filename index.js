@@ -1,13 +1,84 @@
+// const express = require('express');
+// const app = express();
+// require('./db/config');
+// const User = require('./db/User');
+// const Product = require('./db/Product');
+// const cors = require('cors');
+// const Jwt = require('jsonwebtoken');
+// const jwtKey ='e-comm'; 
+// app.use(express.json());
+// app.use(cors());
+
 const express = require('express');
 const app = express();
 require('./db/config');
 const User = require('./db/User');
-const Product = require('./db/Product');
 const cors = require('cors');
-const Jwt = require('jsonwebtoken');
-const jwtKey ='e-comm'; 
+const nodemailer = require('nodemailer');
+const crypto = require('crypto');
+
 app.use(express.json());
 app.use(cors());
+
+const transporter = nodemailer.createTransport({
+    host: 'smtp.ethereal.email',
+    port: 587,
+    auth: {
+        user: 'nicklaus.waelchi@ethereal.email',
+        pass: 'PPzrmqBXNXyUj4g5Ej'
+    }
+});
+
+// Forgot Password - Send Reset Link
+app.post('/forgot-password', async (req, res) => {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) {
+        return res.status(400).send({ message: "User not found" });
+    }
+
+    // Generate token
+    const token = crypto.randomBytes(32).toString("hex");
+
+    // Save token temporarily (in DB or in-memory, here we update user model)
+    user.resetToken = token;
+    user.tokenExpiry = Date.now() + 3600000; // 1 hour
+    await user.save();
+
+    const resetLink = `http://localhost:3000/reset-password/${token}`;
+
+    // Send email
+    await transporter.sendMail({
+        from: '"Support" <support@example.com>',
+        to: user.email,
+        subject: "Password Reset",
+        html: `<p>You requested for password reset</p>
+               <p>Click this <a href="${resetLink}">link</a> to reset your password</p>`
+    });
+
+    res.send({ message: "Password reset link sent to your email" });
+});
+
+// Reset Password - Handle new password
+app.post('/reset-password/:token', async (req, res) => {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    const user = await User.findOne({ resetToken: token, tokenExpiry: { $gt: Date.now() } });
+
+    if (!user) {
+        return res.status(400).send({ message: "Invalid or expired token" });
+    }
+
+    user.password = password;
+    user.resetToken = undefined;
+    user.tokenExpiry = undefined;
+    await user.save();
+
+    res.send({ message: "Password has been reset successfully" });
+});
+
 
 app.post('/register', async (req, res) => {
     try {
@@ -57,19 +128,6 @@ app.post('/add-product',verifyToken,async (req,res)=>{
     let result = await data.save();
     res.send(result);
 })
-// app.get('/products', verifyToken, async (req, res) => {
-//     try {
-//         const products = await Product.find();
-//         if (products.length > 0) {
-//             res.send(products);
-//         } else {
-//             res.send({ result: "No product found" });
-//         }
-//     } catch (err) {
-//         console.error("Fetch products error:", err);
-//         res.status(500).send({ error: "Internal server error" });
-//     }
-// });
 
 app.get('/products', verifyToken,async (req, res) => {
     try {
