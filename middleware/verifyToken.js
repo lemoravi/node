@@ -3,12 +3,15 @@ const jwtKey = 'e-comm';
 
 function verifyToken(req, res, next) {
     let token = req.headers['authorization'];
+
     if (token) {
-        token = token.split(' ')[1];
-        Jwt.verify(token, jwtKey, (err, valid) => {
+        token = token.split(' ')[1]; // Remove 'Bearer' from token string
+
+        Jwt.verify(token, jwtKey, (err, decoded) => {
             if (err) {
-                res.status(401).send({ result: "Please provide valid token" });
+                return res.status(401).send({ result: "Please provide a valid token" });
             } else {
+                req.user = decoded.user; // Attach user info to request object
                 next();
             }
         });

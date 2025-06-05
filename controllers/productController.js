@@ -7,11 +7,14 @@ exports.addProduct = async (req, res) => {
 };
 
 exports.getProducts = async (req, res) => {
-    const userId = req.headers['authorisation'];
-    if (!userId) return res.status(401).send({ error: "Unauthorized" });
+    const userId = req.user._id; // Access user ID from token
 
-    const products = await Product.find({ userId });
-    res.send(products.length ? products : { result: "No products found" });
+    try {
+        const products = await Product.find({ userId }); // Replace with actual logic
+        res.send(products.length ? products : { result: "No products found" });
+    } catch (error) {
+        res.status(500).send({ error: "Server error while fetching products" });
+    }
 };
 
 exports.deleteProduct = async (req, res) => {
